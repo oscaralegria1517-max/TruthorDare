@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Action ou Vérité — Prototype V5</title>
+  <style>
+    :root {
+      --line: rgba(255,255,255,0.08);
+      --text: #f6f1f1;
+      --muted: #c9b4b4;
+      --shadow: 0 20px 60px rgba(0,0,0,0.45);
+      --radius: 28px;
+      --red-1: #ff2b2b;
+      --red-2: #b70000;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(255, 0, 0, 0.25), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(255, 40, 40, 0.18), transparent 24%),
+        linear-gradient(180deg, #060606 0%, #0b0000 55%, #140202 100%);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), transparent 14%),
+        radial-gradient(circle at 50% 25%, rgba(255,255,255,0.06), transparent 14%);
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      padding: env(safe-area-inset-top, 16px) 20px env(safe-area-inset-bottom, 20px);
+      opacity: 0;
+      transform: translateY(10px) scale(0.985);
+      transition: opacity .24s ease, transform .24s ease;
+    }
+
+    .screen.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .status-space {
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      margin-bottom: 14px;
+    }
+
+    .back-btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+    }
+
+    .screen-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .hero {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px 8px 40px;
+      cursor: pointer;
+    }
+
+    .hero-title {
+      font-size: clamp(48px, 11vw, 76px);
+      line-height: .92;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+      color: #ff1d1d;
+      text-shadow: 0 0 24px rgba(255, 0, 0, 0.16);
+      margin: 0;
+    }
+
+    .glow-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(40px);
+      pointer-events: none;
+      opacity: .65;
+    }
+
+    .g1 { width: 240px; height: 240px; right: -80px; top: 40px; background: rgba(255,0,0,.22); }
+    .g2 { width: 180px; height: 180px; left: -60px; bottom: 80px; background: rgba(255,70,70,.14); }
+
+    .content {
+      flex: 1;
+      overflow: auto;
+      padding-bottom: 14px;
+    }
+
+    .section-card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .section-heading {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+      color: #ff2323;
+      margin: 0 0 8px;
+    }
+
+    .section-copy {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .players-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .player-row {
+      background: rgba(0,0,0,0.24);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 22px;
+      padding: 12px;
+    }
+
+    .player-row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .player-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.62);
+    }
+
+    .delete-player-btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.85);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .input {
+      width: 100%;
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 14px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .input::placeholder { color: rgba(255,255,255,0.38); }
+
+    .gender-toggle {
+      width: 100%;
+      margin-top: 10px;
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 14px 14px;
+      font-size: 15px;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .gender-toggle span {
+      color: rgba(255,255,255,0.72);
+      font-weight: 600;
+    }
+
+    .actions-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      width: 100%;
+      border-radius: 18px;
+      padding: 16px 18px;
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      cursor: pointer;
+      transition: transform .16s ease, opacity .16s ease;
+    }
+
+    .btn:active { transform: scale(.985); }
+
+    .btn-primary {
+      background: linear-gradient(180deg, var(--red-1) 0%, #b70000 100%);
+      box-shadow: 0 14px 28px rgba(226, 18, 18, 0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .mode-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .mode-row {
+      width: 100%;
+      min-height: 78px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: white;
+      padding: 16px 18px;
+      text-align: left;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mode-left {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mode-name {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+    }
+
+    .mode-desc {
+      font-size: 13px;
+      color: rgba(255,255,255,0.74);
+    }
+
+    .mode-soft { background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05)); }
+    .mode-spice { background: linear-gradient(180deg, rgba(255,80,80,0.22), rgba(120,0,0,0.18)); }
+    .mode-hard { background: linear-gradient(180deg, rgba(255,0,0,0.26), rgba(70,0,0,0.2)); }
+    .mode-bdsm { background: linear-gradient(180deg, rgba(90,0,0,0.34), rgba(15,0,0,0.5)); }
+
+    .mode-arrow {
+      font-size: 22px;
+      opacity: .8;
+      font-weight: 900;
+    }
+
+    .draw-screen-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .mode-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.76);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .result-card {
+      min-height: 360px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 32px;
+      padding: 28px 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .result-player {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -.02em;
+      color: rgba(255,255,255,0.95);
+      margin-bottom: 20px;
+    }
+
+    .result-title {
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+      color: #ff2424;
+      margin-bottom: 14px;
+    }
+
+    .result-card-text {
+      font-size: 17px;
+      line-height: 1.45;
+      color: rgba(255,255,255,0.84);
+      max-width: 280px;
+    }
+
+    .footer-note {
+      margin-top: auto;
+      text-align: center;
+      color: rgba(255,255,255,0.46);
+      font-size: 12px;
+      padding-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="glow-shape g1"></div>
+    <div class="glow-shape g2"></div>
+
+    <section id="screen-home" class="screen active">
+      <div class="status-space"></div>
+      <div class="hero" id="homeTapArea" role="button" aria-label="Commencer le jeu" tabindex="0">
+        <h1 class="hero-title">Action<br>ou vérité</h1>
+      </div>
+    </section>
+
+    <section id="screen-players" class="screen">
+      <div class="status-space"></div>
+      <div class="header">
+        <button class="back-btn" data-back="screen-home">Retour</button>
+        <div class="screen-title">Joueurs</div>
+      </div>
+      <div class="content">
+        <div class="section-card">
+          <h2 class="section-heading">Joueur</h2>
+          <p class="section-copy">Ajoute ou supprime des joueurs. Le sexe alterne au clic entre Homme et Femme.</p>
+          <div id="playersList" class="players-list"></div>
+          <button id="addPlayerBtn" class="btn btn-secondary" type="button">Plus</button>
+          <div class="actions-stack">
+            <button id="playBtn" class="btn btn-primary" type="button">Jouer</button>
+          </div>
+        </div>
+        <div class="footer-note">Prototype V5 séparé des versions précédentes.</div>
+      </div>
+    </section>
+
+    <section id="screen-modes" class="screen">
+      <div class="status-space"></div>
+      <div class="header">
+        <button class="back-btn" data-back="screen-players">Retour</button>
+        <div class="screen-title">Modes</div>
+      </div>
+      <div class="content">
+        <div class="section-card">
+          <h2 class="section-heading">Choisis ton niveau</h2>
+          <p class="section-copy">Chaque mode possède un deck Homme et un deck Femme.</p>
+          <div class="mode-stack">
+            <button class="mode-row mode-soft" data-mode="Soft" type="button">
+              <div class="mode-left">
+                <span class="mode-name">Soft</span>
+                <span class="mode-desc">Deck Homme + Deck Femme</span>
+              </div>
+              <span class="mode-arrow">›</span>
+            </button>
+            <button class="mode-row mode-spice" data-mode="Spice" type="button">
+              <div class="mode-left">
+                <span class="mode-name">Spice</span>
+                <span class="mode-desc">Deck Homme + Deck Femme</span>
+              </div>
+              <span class="mode-arrow">›</span>
+            </button>
+            <button class="mode-row mode-hard" data-mode="Hard" type="button">
+              <div class="mode-left">
+                <span class="mode-name">Hard</span>
+                <span class="mode-desc">Deck Homme + Deck Femme</span>
+              </div>
+              <span class="mode-arrow">›</span>
+            </button>
+            <button class="mode-row mode-bdsm" data-mode="BDSM" type="button">
+              <div class="mode-left">
+                <span class="mode-name">BDSM</span>
+                <span class="mode-desc">Deck Homme + Deck Femme</span>
+              </div>
+              <span class="mode-arrow">›</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-draw" class="screen">
+      <div class="status-space"></div>
+      <div class="header">
+        <button class="back-btn" data-back="screen-modes">Retour</button>
+      </div>
+      <div class="draw-screen-content">
+        <div id="modePill" class="mode-pill">Soft</div>
+
+        <div id="resultCard" class="result-card" role="button" tabindex="0" aria-label="Tirer une carte">
+          <div class="result-player">Touchez pour tirer</div>
+          <div class="result-title">Carte</div>
+          <div class="result-card-text">Le nom du joueur et la carte s’affichent ici.</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const playersList = document.getElementById('playersList');
+    const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const playBtn = document.getElementById('playBtn');
+    const modePill = document.getElementById('modePill');
+    const resultCard = document.getElementById('resultCard');
+    const homeTapArea = document.getElementById('homeTapArea');
+
+    let playerCount = 0;
+    let currentMode = 'Soft';
+
+    // Exemple de stockage réel des cartes :
+    // mode -> sexe -> type -> tableau de cartes
+    const cardDecks = {
+      Soft: {
+        Homme: {
+          Action: [
+            "Action Soft Homme 1",
+            "Action Soft Homme 2",
+            "Action Soft Homme 3",
+            "Action Soft Homme 4",
+            "Action Soft Homme 5",
+            "Action Soft Homme 6"
+          ],
+          Verite: [
+            "Vérité Soft Homme 1",
+            "Vérité Soft Homme 2",
+            "Vérité Soft Homme 3",
+            "Vérité Soft Homme 4",
+            "Vérité Soft Homme 5",
+            "Vérité Soft Homme 6"
+          ]
+        },
+        Femme: {
+          Action: [
+            "Action Soft Femme 1",
+            "Action Soft Femme 2",
+            "Action Soft Femme 3",
+            "Action Soft Femme 4",
+            "Action Soft Femme 5",
+            "Action Soft Femme 6"
+          ],
+          Verite: [
+            "Vérité Soft Femme 1",
+            "Vérité Soft Femme 2",
+            "Vérité Soft Femme 3",
+            "Vérité Soft Femme 4",
+            "Vérité Soft Femme 5",
+            "Vérité Soft Femme 6"
+          ]
+        }
+      },
+      Spice: {
+        Homme: {
+          Action: [
+            "Action Spice Homme 1",
+            "Action Spice Homme 2",
+            "Action Spice Homme 3",
+            "Action Spice Homme 4",
+            "Action Spice Homme 5",
+            "Action Spice Homme 6"
+          ],
+          Verite: [
+            "Vérité Spice Homme 1",
+            "Vérité Spice Homme 2",
+            "Vérité Spice Homme 3",
+            "Vérité Spice Homme 4",
+            "Vérité Spice Homme 5",
+            "Vérité Spice Homme 6"
+          ]
+        },
+        Femme: {
+          Action: [
+            "Action Spice Femme 1",
+            "Action Spice Femme 2",
+            "Action Spice Femme 3",
+            "Action Spice Femme 4",
+            "Action Spice Femme 5",
+            "Action Spice Femme 6"
+          ],
+          Verite: [
+            "Vérité Spice Femme 1",
+            "Vérité Spice Femme 2",
+            "Vérité Spice Femme 3",
+            "Vérité Spice Femme 4",
+            "Vérité Spice Femme 5",
+            "Vérité Spice Femme 6"
+          ]
+        }
+      },
+      Hard: {
+        Homme: {
+          Action: [
+            "Action Hard Homme 1",
+            "Action Hard Homme 2",
+            "Action Hard Homme 3",
+            "Action Hard Homme 4",
+            "Action Hard Homme 5",
+            "Action Hard Homme 6"
+          ],
+          Verite: [
+            "Vérité Hard Homme 1",
+            "Vérité Hard Homme 2",
+            "Vérité Hard Homme 3",
+            "Vérité Hard Homme 4",
+            "Vérité Hard Homme 5",
+            "Vérité Hard Homme 6"
+          ]
+        },
+        Femme: {
+          Action: [
+            "Action Hard Femme 1",
+            "Action Hard Femme 2",
+            "Action Hard Femme 3",
+            "Action Hard Femme 4",
+            "Action Hard Femme 5",
+            "Action Hard Femme 6"
+          ],
+          Verite: [
+            "Vérité Hard Femme 1",
+            "Vérité Hard Femme 2",
+            "Vérité Hard Femme 3",
+            "Vérité Hard Femme 4",
+            "Vérité Hard Femme 5",
+            "Vérité Hard Femme 6"
+          ]
+        }
+      },
+      BDSM: {
+        Homme: {
+          Action: [
+            "Action BDSM Homme 1",
+            "Action BDSM Homme 2",
+            "Action BDSM Homme 3",
+            "Action BDSM Homme 4",
+            "Action BDSM Homme 5",
+            "Action BDSM Homme 6"
+          ],
+          Verite: [
+            "Vérité BDSM Homme 1",
+            "Vérité BDSM Homme 2",
+            "Vérité BDSM Homme 3",
+            "Vérité BDSM Homme 4",
+            "Vérité BDSM Homme 5",
+            "Vérité BDSM Homme 6"
+          ]
+        },
+        Femme: {
+          Action: [
+            "Action BDSM Femme 1",
+            "Action BDSM Femme 2",
+            "Action BDSM Femme 3",
+            "Action BDSM Femme 4",
+            "Action BDSM Femme 5",
+            "Action BDSM Femme 6"
+          ],
+          Verite: [
+            "Vérité BDSM Femme 1",
+            "Vérité BDSM Femme 2",
+            "Vérité BDSM Femme 3",
+            "Vérité BDSM Femme 4",
+            "Vérité BDSM Femme 5",
+            "Vérité BDSM Femme 6"
+          ]
+        }
+      }
+    };
+
+    const playerStats = {};
+    const playerUsedCards = {};
+    const drawHistory = [];
+
+    function ensurePlayerState(playerName) {
+      if (!playerStats[playerName]) {
+        playerStats[playerName] = { total: 0, action: 0, verite: 0 };
+      }
+      if (!playerUsedCards[playerName]) {
+        playerUsedCards[playerName] = {
+          Soft:  { Homme: { Action: new Set(), Verite: new Set() }, Femme: { Action: new Set(), Verite: new Set() } },
+          Spice: { Homme: { Action: new Set(), Verite: new Set() }, Femme: { Action: new Set(), Verite: new Set() } },
+          Hard:  { Homme: { Action: new Set(), Verite: new Set() }, Femme: { Action: new Set(), Verite: new Set() } },
+          BDSM:  { Homme: { Action: new Set(), Verite: new Set() }, Femme: { Action: new Set(), Verite: new Set() } }
+        };
+      }
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+      const target = document.getElementById(id);
+      if (target) target.classList.add('active');
+    }
+
+    function renumberPlayers() {
+      const rows = [...playersList.querySelectorAll('.player-row')];
+      rows.forEach((row, index) => {
+        const label = row.querySelector('.player-label');
+        const input = row.querySelector('.player-name');
+        const num = index + 1;
+        label.textContent = `Joueur ${num}`;
+        if (!input.value.trim() || input.value.startsWith("Joueur ")) {
+          input.placeholder = `Nom du joueur ${num}`;
+        }
+      });
+      playerCount = rows.length;
+    }
+
+    function createPlayerRow(index) {
+      const row = document.createElement('div');
+      row.className = 'player-row';
+      row.innerHTML = `
+        <div class="player-row-top">
+          <label class="player-label">Joueur ${index}</label>
+          <button class="delete-player-btn" type="button">Supprimer</button>
+        </div>
+        <input class="input player-name" type="text" placeholder="Nom du joueur ${index}" />
+        <button class="gender-toggle" type="button" data-gender="Homme"><span>Sexe :</span> Homme</button>
+      `;
+
+      const toggle = row.querySelector('.gender-toggle');
+      toggle.addEventListener('click', () => {
+        const current = toggle.getAttribute('data-gender');
+        const next = current === 'Homme' ? 'Femme' : 'Homme';
+        toggle.setAttribute('data-gender', next);
+        toggle.innerHTML = `<span>Sexe :</span> ${next}`;
+      });
+
+      const deleteBtn = row.querySelector('.delete-player-btn');
+      deleteBtn.addEventListener('click', () => {
+        row.remove();
+        if (playersList.querySelectorAll('.player-row').length === 0) {
+          addPlayer();
+        } else {
+          renumberPlayers();
+        }
+      });
+
+      return row;
+    }
+
+    function addPlayer(defaultName = '') {
+      const index = playersList.querySelectorAll('.player-row').length + 1;
+      const row = createPlayerRow(index);
+      row.querySelector('.player-name').value = defaultName;
+      playersList.appendChild(row);
+      renumberPlayers();
+    }
+
+    function getPlayers() {
+      const rows = [...playersList.querySelectorAll('.player-row')];
+      return rows.map((row, index) => {
+        const nameInput = row.querySelector('.player-name');
+        const genderBtn = row.querySelector('.gender-toggle');
+        const rawName = nameInput.value.trim();
+        const name = rawName || `Joueur ${index + 1}`;
+        const gender = genderBtn.getAttribute('data-gender');
+        ensurePlayerState(name);
+        return { name, gender };
+      });
+    }
+
+    function resetResultCard() {
+      resultCard.innerHTML = `
+        <div class="result-player">Touchez pour tirer</div>
+        <div class="result-title">Carte</div>
+        <div class="result-card-text">Le nom du joueur et la carte s’affichent ici.</div>
+      `;
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      modePill.textContent = mode;
+      resetResultCard();
+      showScreen('screen-draw');
+    }
+
+    function randomChoice(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function getMinPlayersByStat(players, statKey) {
+      let min = Infinity;
+      for (const player of players) {
+        ensurePlayerState(player.name);
+        min = Math.min(min, playerStats[player.name][statKey]);
+      }
+      return players.filter(player => playerStats[player.name][statKey] === min);
+    }
+
+    function choosePlayerBalanced(players) {
+      let candidates = getMinPlayersByStat(players, 'total');
+      const lastDraw = drawHistory[drawHistory.length - 1];
+
+      if (lastDraw && candidates.length > 1) {
+        const nonLast = candidates.filter(p => p.name !== lastDraw.playerName);
+        if (nonLast.length > 0 && Math.random() < 0.65) {
+          candidates = nonLast;
+        }
+      }
+
+      return randomChoice(candidates);
+    }
+
+    function chooseCardTypeBalanced(playerName) {
+      ensurePlayerState(playerName);
+      const stats = playerStats[playerName];
+      const nextCountForPlayer = stats.total + 1;
+
+      if (nextCountForPlayer === 10) {
+        if (stats.action < 5) return 'Action';
+        if (stats.verite < 5) return 'Verite';
+      }
+
+      if (stats.action < stats.verite) return 'Action';
+      if (stats.verite < stats.action) return 'Verite';
+      return Math.random() < 0.5 ? 'Action' : 'Verite';
+    }
+
+    function pickCardForPlayer(playerName, mode, gender, type) {
+      ensurePlayerState(playerName);
+
+      const usedSet = playerUsedCards[playerName][mode][gender][type];
+      const deck = cardDecks[mode][gender][type];
+      const available = deck.filter((_, index) => !usedSet.has(index));
+
+      if (available.length === 0) {
+        usedSet.clear();
+      }
+
+      const refreshedAvailable = deck
+        .map((cardText, index) => ({ cardText, index }))
+        .filter(item => !usedSet.has(item.index));
+
+      const selected = randomChoice(refreshedAvailable);
+      usedSet.add(selected.index);
+
+      return {
+        text: selected.cardText,
+        number: selected.index + 1
+      };
+    }
+
+    function drawCard() {
+      if (playersList.querySelectorAll('.player-row').length === 0) {
+        addPlayer();
+      }
+
+      const players = getPlayers();
+      const selectedPlayer = choosePlayerBalanced(players);
+      const cardType = chooseCardTypeBalanced(selectedPlayer.name);
+      const typeKey = cardType === 'Action' ? 'Action' : 'Verite';
+      const pickedCard = pickCardForPlayer(
+        selectedPlayer.name,
+        currentMode,
+        selectedPlayer.gender,
+        typeKey
+      );
+
+      ensurePlayerState(selectedPlayer.name);
+      playerStats[selectedPlayer.name].total += 1;
+      if (cardType === 'Action') {
+        playerStats[selectedPlayer.name].action += 1;
+      } else {
+        playerStats[selectedPlayer.name].verite += 1;
+      }
+
+      drawHistory.push({
+        playerName: selectedPlayer.name,
+        gender: selectedPlayer.gender,
+        mode: currentMode,
+        type: cardType,
+        cardNumber: pickedCard.number
+      });
+
+      resultCard.innerHTML = `
+        <div class="result-player">${selectedPlayer.name}</div>
+        <div class="result-title">${cardType}</div>
+        <div class="result-card-text">${pickedCard.text}</div>
+      `;
+    }
+
+    addPlayerBtn.addEventListener('click', () => addPlayer());
+
+    playBtn.addEventListener('click', () => {
+      if (playersList.querySelectorAll('.player-row').length === 0) addPlayer();
+      showScreen('screen-modes');
+    });
+
+    homeTapArea.addEventListener('click', () => showScreen('screen-players'));
+    homeTapArea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        showScreen('screen-players');
+      }
+    });
+
+    document.querySelectorAll('[data-back]').forEach(btn => {
+      btn.addEventListener('click', () => showScreen(btn.dataset.back));
+    });
+
+    document.querySelectorAll('[data-mode]').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    });
+
+    resultCard.addEventListener('click', drawCard);
+    resultCard.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        drawCard();
+      }
+    });
+
+    addPlayer();
+  </script>
+</body>
+</html>
